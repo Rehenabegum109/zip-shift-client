@@ -1,17 +1,20 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import useAuth from '../../Hook/useAuth';
-import { Link, useLocation } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import SocialLogin from './SocialLogin/SocialLogin';
 import axios from 'axios';
+import UseAxiosSecure from '../../Hook/UseAxiosSecure';
 
 const Register = () => {
     const {register,handleSubmit,formState:{errors}} =useForm()
     const{registerUser,updateUserProfile} =useAuth()
     const location =useLocation()
+    const navigate =useNavigate()
+    const axiosSecure =UseAxiosSecure()
     console.log('location in register',location)
      const handleRegister =(data) =>{
-        console.log('after submit',data.photo[0])
+      
         const profileImg =data.photo[0]
         
         registerUser(data.email,data.password)
@@ -22,17 +25,33 @@ const Register = () => {
             const imageApiKey =`https://api.imgbb.com/1/upload?key=${import.meta.env.VITE_imageUrl}`
             axios.post(imageApiKey,formData)
           .then(res =>{
-            console.log('after image upload',res.data.data.url)
+            const photoURL =res.data.data.url;
+            // create user in the database
+            const userInfo ={
+              email:data.email,
+              dispalyName:data.name,
+              photoURL:photoURL
+            }
+            axiosSecure.post('/users',userInfo)
+            .then(res =>{
+              if(res.data.insertedId) {
+                console.log('user created database id');
+              }
+            })
             // update user profile
             const userProfile ={
               displayName:data.name,
-              phtoURL :res.data.data.url
+              photoURL
             }
             updateUserProfile(userProfile)
-            .then(result =>{
-              console.log('user profile user',result.user)
-              .catch(error =>console.log(error) )
-            })
+  .then(() => {
+    console.log("Profile updated successfully");
+
+    // Redirect to home page
+    navigate('/');
+  })
+  .catch(error => console.log(error));
+
           })
         })
         .catch(err =>{
